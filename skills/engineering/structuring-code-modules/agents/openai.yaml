@@ -1,0 +1,3 @@
+interface:
+  display_name: "Structuring Code Modules"
+  short_description: "Decide file, package, and module structure"

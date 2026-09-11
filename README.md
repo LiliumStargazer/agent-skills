@@ -100,7 +100,9 @@ Skills are grouped by who can invoke them. User-invoked skills run only when req
 - **[research](./skills/engineering/research/SKILL.md)**: Research primary sources and save cited findings.
 - **[tdd](./skills/engineering/tdd/SKILL.md)**: Apply red-green-refactor in vertical slices.
 - **[domain-modeling](./skills/engineering/domain-modeling/SKILL.md)**: Build and maintain a project's domain model.
+- **[choosing-clear-identifiers](./skills/engineering/choosing-clear-identifiers/SKILL.md)**: Choose and review identifiers for point-of-use clarity.
 - **[codebase-design](./skills/engineering/codebase-design/SKILL.md)**: Design deep modules with small interfaces and clean seams.
+- **[structuring-code-modules](./skills/engineering/structuring-code-modules/SKILL.md)**: Decide file, package, and module structure through an evidence-based package gate.
 - **[code-review](./skills/engineering/code-review/SKILL.md)**: Review a diff against repository standards and its specification.
 - **[resolving-merge-conflicts](./skills/engineering/resolving-merge-conflicts/SKILL.md)**: Resolve merge or rebase conflicts by tracing intent.
 - **[wizard](./skills/engineering/wizard/SKILL.md)**: Generate an interactive shell wizard for required human steps.
