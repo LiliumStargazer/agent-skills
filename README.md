@@ -16,8 +16,8 @@ The skills follow the Agent Skills format and are available to:
 ## Install on a new machine
 
 ```bash
-git clone git@github.com:LiliumStargazer/matt-skills.git
-cd matt-skills
+git clone git@github.com:LiliumStargazer/agent-skills.git
+cd agent-skills
 scripts/link-skills.sh
 ```
 
@@ -28,7 +28,7 @@ Do not install this same set through another installer at the same time. Duplica
 ## Update
 
 ```bash
-cd /path/to/matt-skills
+cd /path/to/agent-skills
 git pull --ff-only
 scripts/link-skills.sh
 ```
@@ -40,7 +40,7 @@ Existing links receive file updates immediately after the pull. Re-run the scrip
 Copy the reusable steering templates, then fill in the project-specific section:
 
 ```bash
-cp /path/to/matt-skills/templates/{AGENTS.md,CLAUDE.md} /path/to/new-project/
+cp /path/to/agent-skills/templates/{AGENTS.md,CLAUDE.md} /path/to/new-project/
 ```
 
 `AGENTS.md` is the shared source of truth. `CLAUDE.md` is a minimal Claude Code adapter that imports it.
@@ -62,7 +62,7 @@ Generic personal skills belong in the appropriate bucket here. Skills tied to on
 The expected remotes are:
 
 ```text
-origin    git@github.com:LiliumStargazer/matt-skills.git
+origin    git@github.com:LiliumStargazer/agent-skills.git
 upstream  https://github.com/mattpocock/skills.git
 ```
 

@@ -9,8 +9,8 @@ Clone the repository once, then create global symlinks:
 <canonical-block name="clone-and-link">
 
 ```bash
-git clone git@github.com:LiliumStargazer/matt-skills.git
-cd matt-skills
+git clone git@github.com:LiliumStargazer/agent-skills.git
+cd agent-skills
 scripts/link-skills.sh
 ```
 
@@ -23,7 +23,7 @@ The script links promoted and in-progress skills into both `~/.claude/skills` an
 <canonical-block name="update-and-relink">
 
 ```bash
-cd /path/to/matt-skills
+cd /path/to/agent-skills
 git pull --ff-only
 scripts/link-skills.sh
 ```

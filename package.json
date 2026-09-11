@@ -5,7 +5,7 @@
   "description": "LiliumStargazer's personal agent skill toolkit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LiliumStargazer/matt-skills"
+    "url": "https://github.com/LiliumStargazer/agent-skills"
   },
   "license": "MIT",
   "scripts": {
