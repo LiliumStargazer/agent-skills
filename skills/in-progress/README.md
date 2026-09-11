@@ -2,11 +2,7 @@
 
 Beta. These skills are public on purpose: try them and tell me what breaks. They're excluded from the plugin and the top-level README until they graduate to a stable bucket, they get no docs pages, and they can change or disappear without warning.
 
-The plugin won't give you these. Install one directly:
-
-```bash
-npx skills@latest add mattpocock/skills --skill=<name>
-```
+The Claude plugin does not include these. The canonical local installation links them for testing when you run `scripts/link-skills.sh` from the repository root.
 
 - **[loop-me](./loop-me/SKILL.md)**: Grill yourself into implementable workflow specs over multiple sessions, using the current directory as a stateful workspace. User-invoked.
 - **[writing-beats](./writing-beats/SKILL.md)**: Shape an article as a journey of beats, choose-your-own-adventure style. Pick a starting beat, write only that beat, then pivot to the next, until the article reaches a natural end.

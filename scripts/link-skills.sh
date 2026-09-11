@@ -1,62 +1,121 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# NOTE: This is a dev-only script, intended for use by maintainers of this repo.
-# It is not a supported installer. Modifications to it, or requests for
-# modifications, will not be approved.
-#
-# Links all skills in the repository into the local skill directories used by
-# each agent harness:
-#   - ~/.claude/skills: Claude Code
-#   - ~/.agents/skills: Codex and other Agent Skills-compatible harnesses
-# Each entry is a symlink into this repo, so a `git pull` is all that's needed
-# to keep installed skills up to date.
+# Links this repository's daily-driver skills into the global directories used
+# by Claude Code, Codex, Pi, and other Agent Skills-compatible harnesses. Each
+# entry remains a symlink into this repository, so there is one canonical copy.
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
+SKILLS="$REPO/skills"
 DESTS=("$HOME/.claude/skills" "$HOME/.agents/skills")
 
-# Collect the repo's skills once, link into every destination. `deprecated/`
-# is retired, and `misc/` is kept around but rarely used and not promoted (see
-# each bucket's own README): neither belongs in a daily-driver skill
-# directory, so both are skipped here, same as everywhere else non-promoted
-# skills are kept out. `in-progress/` IS still linked: it's public on purpose,
-# feedback wanted, and this local install is exactly where that feedback loop
-# runs.
+if [ ! -d "$SKILLS" ]; then
+  echo "error: skill directory not found: $SKILLS" >&2
+  exit 1
+fi
+
+# Promoted and in-progress skills are linked for daily use and beta feedback.
+# Retired deprecated skills and rarely used misc skills stay out of the global
+# directories.
 names=()
 srcs=()
 while IFS= read -r -d '' skill_md; do
   src="$(dirname "$skill_md")"
   names+=("$(basename "$src")")
   srcs+=("$src")
-done < <(find "$REPO/skills" -name SKILL.md -not -path '*/node_modules/*' -not -path '*/deprecated/*' -not -path '*/misc/*' -print0)
+done < <(find "$SKILLS" -name SKILL.md -not -path '*/node_modules/*' -not -path '*/deprecated/*' -not -path '*/misc/*' -print0)
 
+if [ "${#names[@]}" -eq 0 ]; then
+  echo "error: no skills found under $SKILLS" >&2
+  exit 1
+fi
+
+duplicates="$(printf '%s\n' "${names[@]}" | sort | uniq -d)"
+if [ -n "$duplicates" ]; then
+  echo "error: duplicate skill names cannot share a global skill directory:" >&2
+  printf '  %s\n' $duplicates >&2
+  exit 1
+fi
+
+# Validate every destination and collision before changing anything.
+conflicts=0
 for DEST in "${DESTS[@]}"; do
-  # If $DEST is a symlink that resolves into this repo, we'd end up writing the
-  # per-skill symlinks back into the repo's own skills/ tree. Detect and bail
-  # out instead of polluting the working copy.
   if [ -L "$DEST" ]; then
-    resolved="$(readlink -f "$DEST")"
+    if [ ! -d "$DEST" ]; then
+      echo "error: destination is a broken symlink: $DEST" >&2
+      conflicts=1
+      continue
+    fi
+
+    resolved="$(cd "$DEST" && pwd -P)"
     case "$resolved" in
       "$REPO"|"$REPO"/*)
-        echo "error: $DEST is a symlink into this repo ($resolved)." >&2
-        echo "Remove it (rm \"$DEST\") and re-run; the script will recreate it as a real dir." >&2
-        exit 1
+        echo "error: $DEST resolves into this repository ($resolved)." >&2
+        conflicts=1
+        continue
         ;;
     esac
+  elif [ -e "$DEST" ] && [ ! -d "$DEST" ]; then
+    echo "error: destination exists and is not a directory: $DEST" >&2
+    conflicts=1
+    continue
   fi
 
+  for i in "${!names[@]}"; do
+    target="$DEST/${names[$i]}"
+    src="${srcs[$i]}"
+
+    if [ -L "$target" ]; then
+      if [ "$(readlink "$target")" != "$src" ]; then
+        echo "error: refusing to replace symlink owned by another installation: $target" >&2
+        conflicts=1
+      fi
+    elif [ -e "$target" ]; then
+      echo "error: refusing to replace existing path: $target" >&2
+      conflicts=1
+    fi
+  done
+done
+
+if [ "$conflicts" -ne 0 ]; then
+  exit 1
+fi
+
+for DEST in "${DESTS[@]}"; do
   mkdir -p "$DEST"
+
+  # Remove links created by this repository for skills that were later renamed
+  # or removed. Links to any other source are left untouched.
+  for target in "$DEST"/*; do
+    [ -L "$target" ] || continue
+    linked="$(readlink "$target")"
+    case "$linked" in
+      "$SKILLS"/*)
+        current=0
+        for src in "${srcs[@]}"; do
+          if [ "$linked" = "$src" ]; then
+            current=1
+            break
+          fi
+        done
+        if [ "$current" -eq 0 ]; then
+          rm "$target"
+          echo "removed stale link $target"
+        fi
+        ;;
+    esac
+  done
 
   for i in "${!names[@]}"; do
     name="${names[$i]}"
     src="${srcs[$i]}"
     target="$DEST/$name"
 
-    if [ -e "$target" ] && [ ! -L "$target" ]; then
-      rm -rf "$target"
+    if [ -L "$target" ]; then
+      echo "already linked $name -> $src ($DEST)"
+    else
+      ln -s "$src" "$target"
+      echo "linked $name -> $src ($DEST)"
     fi
-
-    ln -sfn "$src" "$target"
-    echo "linked $name -> $src ($DEST)"
   done
 done

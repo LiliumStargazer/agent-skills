@@ -1,13 +1,13 @@
 {
-  "name": "mattpocock-skills",
+  "name": "liliumstargazer-agent-skills",
   "version": "1.2.3",
-  "description": "Matt Pocock's agent skills for real engineering: grilling, spec/ticket flows, TDD, code review, domain modelling and more. Plug-and-play, not vibe coding.",
+  "description": "LiliumStargazer's personal toolkit of reusable engineering and productivity skills for coding agents.",
   "author": {
-    "name": "Matt Pocock",
-    "url": "https://www.aihero.dev"
+    "name": "LiliumStargazer",
+    "url": "https://github.com/LiliumStargazer"
   },
-  "homepage": "https://www.aihero.dev/s/skills-newsletter",
-  "repository": "https://github.com/mattpocock/skills",
+  "homepage": "https://github.com/LiliumStargazer/matt-skills",
+  "repository": "https://github.com/LiliumStargazer/matt-skills",
   "license": "MIT",
   "keywords": [
     "engineering",
