@@ -7,10 +7,30 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SKILLS="$REPO/skills"
-DESTS=("$HOME/.claude/skills" "$HOME/.agents/skills")
+POLICY="$REPO/policies/ponytail.md"
+SKILL_DESTS=("$HOME/.claude/skills" "$HOME/.agents/skills")
+DEFAULT_PI_AGENT_DIR="$HOME/.pi/agent"
+ACTIVE_PI_AGENT_DIR="${PI_CODING_AGENT_DIR:-$DEFAULT_PI_AGENT_DIR}"
+POLICY_DESTS=(
+  "$HOME/.claude/CLAUDE.md"
+  "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
+  "$DEFAULT_PI_AGENT_DIR/AGENTS.md"
+)
+if [ "$ACTIVE_PI_AGENT_DIR" != "$DEFAULT_PI_AGENT_DIR" ]; then
+  POLICY_DESTS+=("$ACTIVE_PI_AGENT_DIR/AGENTS.md")
+fi
+PONYTAIL_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ponytail/config.json"
 
 if [ ! -d "$SKILLS" ]; then
   echo "error: skill directory not found: $SKILLS" >&2
+  exit 1
+fi
+if [ ! -f "$POLICY" ]; then
+  echo "error: global policy not found: $POLICY" >&2
+  exit 1
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "error: node is required to preserve and update Ponytail's config" >&2
   exit 1
 fi
 
@@ -39,7 +59,7 @@ fi
 
 # Validate every destination and collision before changing anything.
 conflicts=0
-for DEST in "${DESTS[@]}"; do
+for DEST in "${SKILL_DESTS[@]}"; do
   if [ -L "$DEST" ]; then
     if [ ! -d "$DEST" ]; then
       echo "error: destination is a broken symlink: $DEST" >&2
@@ -77,11 +97,44 @@ for DEST in "${DESTS[@]}"; do
   done
 done
 
+for target in "${POLICY_DESTS[@]}"; do
+  if [ -L "$target" ]; then
+    if [ "$(readlink "$target")" != "$POLICY" ]; then
+      echo "error: refusing to replace policy symlink owned by another source: $target" >&2
+      conflicts=1
+    fi
+  elif [ -e "$target" ] && { [ ! -f "$target" ] || [ -s "$target" ]; }; then
+    echo "error: refusing to replace non-empty global instructions: $target" >&2
+    conflicts=1
+  fi
+done
+
+if [ -e "$PONYTAIL_CONFIG" ] && [ ! -f "$PONYTAIL_CONFIG" ]; then
+  echo "error: Ponytail config path is not a file: $PONYTAIL_CONFIG" >&2
+  conflicts=1
+elif [ -f "$PONYTAIL_CONFIG" ] && ! node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$PONYTAIL_CONFIG"; then
+  echo "error: refusing to replace invalid Ponytail config: $PONYTAIL_CONFIG" >&2
+  conflicts=1
+fi
+
 if [ "$conflicts" -ne 0 ]; then
   exit 1
 fi
 
-for DEST in "${DESTS[@]}"; do
+node - "$PONYTAIL_CONFIG" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+const configPath = process.argv[2];
+const config = fs.existsSync(configPath)
+  ? JSON.parse(fs.readFileSync(configPath, "utf8"))
+  : {};
+config.defaultMode = "full";
+fs.mkdirSync(path.dirname(configPath), { recursive: true });
+fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+NODE
+echo "configured Ponytail default mode -> full ($PONYTAIL_CONFIG)"
+
+for DEST in "${SKILL_DESTS[@]}"; do
   mkdir -p "$DEST"
 
   # Remove links created by this repository for skills that were later renamed
@@ -118,4 +171,15 @@ for DEST in "${DESTS[@]}"; do
       echo "linked $name -> $src ($DEST)"
     fi
   done
+done
+
+for target in "${POLICY_DESTS[@]}"; do
+  mkdir -p "$(dirname "$target")"
+  if [ -L "$target" ]; then
+    echo "already linked global policy -> $POLICY ($target)"
+  else
+    [ -e "$target" ] && rm "$target"
+    ln -s "$POLICY" "$target"
+    echo "linked global policy -> $POLICY ($target)"
+  fi
 done

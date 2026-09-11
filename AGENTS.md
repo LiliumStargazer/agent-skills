@@ -10,6 +10,8 @@ Every skill in `engineering/` or `productivity/` (the **promoted** buckets) must
 
 Install commands are copied verbatim from [.agents/install-block.md](./.agents/install-block.md). The supported personal installation uses `scripts/link-skills.sh`; `.claude-plugin/marketplace.json` remains available for packaging the promoted set. Run `claude plugin validate . --strict` after touching either manifest. The original rationale for a Claude plugin but not a Codex one lives in [.agents/adr/0002-ship-as-a-claude-code-plugin.md](./.agents/adr/0002-ship-as-a-claude-code-plugin.md).
 
+[`policies/ponytail.md`](./policies/ponytail.md) is the single source of truth for the personal Ponytail activation policy. `scripts/link-skills.sh` links it into each supported harness's global instruction location and sets Ponytail's shared default mode to `full`. Keep those adapters as symlinks rather than copied policy text. Ponytail's runtime remains external and must use its native Claude Code, Codex, or Pi adapter; do not duplicate its hooks here.
+
 Each skill entry in the top-level `README.md` must link the skill name to its `SKILL.md`.
 
 Each bucket folder has a `README.md` that lists every skill in the bucket with a one-line description, with the skill name linked to its `SKILL.md`. The promoted buckets' `README.md`s and the top-level `README.md` group entries into **User-invoked** and **Model-invoked**; non-promoted bucket `README.md`s (`misc/`, `in-progress/`) use a flat list.
@@ -20,6 +22,6 @@ Every `SKILL.md` is either user-invoked (`disable-model-invocation: true` plus `
 
 [`ask-matt`](./skills/engineering/ask-matt/SKILL.md) is the router that maps every user-reachable skill and how they relate. The same trigger that re-syncs a docs page applies to it: whenever you add, rename, remove, or change how a user-reachable skill fits the flows, re-read `ask-matt`'s `SKILL.md` and update it so the map stays accurate: a new skill it never mentions, or a stale one it still routes to, is a router that lies.
 
-To (re)link every skill outside `deprecated/` and `misc/` into the local harness skill directories (`~/.claude/skills`, `~/.agents/skills`), run `scripts/link-skills.sh`. Each entry is a symlink into this repo, so a `git pull` keeps installed skills current; re-run the script after adding, removing, or renaming a skill.
+To (re)link every skill outside `deprecated/` and `misc/` into the local harness skill directories (`~/.claude/skills`, `~/.agents/skills`) and refresh the global policy adapters, run `scripts/link-skills.sh`. Each entry is a symlink into this repo, so a `git pull` keeps installed skills and policy current; re-run the script after adding, removing, or renaming a skill.
 
 No em-dashes anywhere in this repo's prose (`SKILL.md` files, docs, `README.md`, `CHANGELOG.md`, ADRs, changesets, code comments). Where a sentence reaches for one, rewrite it instead with a comma, colon, period, parentheses, or a conjunction, whichever the sentence actually wants; never do a blind character substitution.

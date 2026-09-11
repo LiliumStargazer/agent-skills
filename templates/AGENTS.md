@@ -19,7 +19,6 @@
 
 - Prefer existing project patterns, standard library features, and native platform capabilities.
 - Avoid overengineering, unnecessary dependencies, and abstractions for hypothetical future needs.
-- Use Ponytail when available for coding, refactoring, testing, and code review.
 
 ## Project-specific instructions
 

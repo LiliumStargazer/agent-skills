@@ -2,7 +2,7 @@
 
 This repository is the canonical source for the reusable agent skills I want available across projects. It started as a fork of [Matt Pocock's skills](https://github.com/mattpocock/skills) and keeps that upstream relationship while also carrying local modifications and personal skills.
 
-The skill files under `skills/` are the source of truth. Ponytail remains a separate plugin, and project-specific skills remain in their own project repositories.
+The skill files under `skills/` are the source of truth for reusable capabilities. [`policies/ponytail.md`](./policies/ponytail.md) is the source of truth for the personal Ponytail activation policy. Ponytail's runtime remains a separate native plugin or package, and project-specific skills remain in their own project repositories.
 
 ## Compatibility
 
@@ -13,17 +13,26 @@ The skills follow the Agent Skills format and are available to:
 - Pi through `~/.agents/skills`
 - Other compatible harnesses that discover one of those directories
 
+The personal policy uses each harness's supported global instruction file: `~/.claude/CLAUDE.md` for Claude Code, `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`) for Codex, and `$PI_CODING_AGENT_DIR/AGENTS.md` (default `~/.pi/agent/AGENTS.md`) for Pi. These files are symlinks to the one canonical policy.
+
 ## Install on a new machine
 
 ```bash
 git clone git@github.com:LiliumStargazer/agent-skills.git
 cd agent-skills
 scripts/link-skills.sh
+
+# Install Ponytail's native runtime once in each harness you use.
+claude plugin marketplace add DietrichGebert/ponytail
+claude plugin install ponytail@ponytail
+codex plugin marketplace add DietrichGebert/ponytail
+codex plugin add ponytail@ponytail
+pi install npm:@dietrichgebert/ponytail
 ```
 
-The script creates per-skill symlinks, so this checkout remains the only canonical copy. It links `engineering/`, `productivity/`, and `in-progress/`. It intentionally excludes `misc/` and `deprecated/`.
+The script creates per-skill symlinks, so this checkout remains the only canonical copy. It links `engineering/`, `productivity/`, and `in-progress/`, and intentionally excludes `misc/` and `deprecated/`. It also links the global policy into Claude Code, Codex, Pi's default agent directory, and the active `PI_CODING_AGENT_DIR` when set. Finally, it preserves Ponytail's other settings while setting its shared native default to `full`.
 
-Do not install this same set through another installer at the same time. Duplicate names can make skill discovery ambiguous.
+Do not install this same skill set through another installer at the same time. Duplicate names can make skill discovery ambiguous. Ponytail is installed separately because each harness uses its native lifecycle adapter instead of a copied implementation.
 
 ## Update
 
@@ -33,7 +42,15 @@ git pull --ff-only
 scripts/link-skills.sh
 ```
 
-Existing links receive file updates immediately after the pull. Re-run the script to add new skills and remove stale links after skill renames or removals.
+Existing links and global policy adapters receive file updates immediately after the pull. Re-run the script to add new skills, remove stale links after skill renames or removals, and restore the `full` Ponytail default.
+
+For a non-default Pi profile, run the script with that profile selected, for example `PI_CODING_AGENT_DIR=~/.pi/accounts/work scripts/link-skills.sh`. Pi loads global instructions from its active agent directory.
+
+## Global Ponytail policy
+
+The canonical policy activates Ponytail `full` for code-changing and code-review work, excludes discovery, planning, research, operational validation, and documentation-only work, and reserves `ultra` for an explicit user request. Repository instructions load afterward and may specialize the global policy.
+
+The global instruction file is behavioral guidance, while Ponytail's native adapter supplies the actual rules and mode lifecycle. The bootstrap does not copy or reimplement Ponytail hooks.
 
 ## Start a new project
 
@@ -43,7 +60,7 @@ Copy the reusable steering templates, then fill in the project-specific section:
 cp /path/to/agent-skills/templates/{AGENTS.md,CLAUDE.md} /path/to/new-project/
 ```
 
-`AGENTS.md` is the shared source of truth. `CLAUDE.md` is a minimal Claude Code adapter that imports it.
+`AGENTS.md` is the project's shared source of truth. `CLAUDE.md` is a minimal Claude Code adapter that imports it. These are templates only: nothing under `templates/` is loaded until it is copied into a project, and the templates do not replace the global personal policy.
 
 ## Repository layout
 
@@ -52,8 +69,9 @@ cp /path/to/agent-skills/templates/{AGENTS.md,CLAUDE.md} /path/to/new-project/
 - `skills/in-progress/`: beta skills linked locally but not shipped in the Claude plugin
 - `skills/misc/`: retained but not installed by default
 - `skills/deprecated/`: retired skills
-- `templates/`: reusable project instruction files
-- `scripts/link-skills.sh`: global symlink installer
+- `templates/`: reusable project instruction files, inactive until copied
+- `policies/ponytail.md`: canonical personal Ponytail activation policy
+- `scripts/link-skills.sh`: global skill and policy adapter installer
 
 Generic personal skills belong in the appropriate bucket here. Skills tied to one project stay in that project's repository.
 
