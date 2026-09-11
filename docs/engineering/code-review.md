@@ -1,8 +1,10 @@
 ## What it does
 
-`code-review` reviews the diff between `HEAD` and a fixed point you name (a commit, a branch, a tag, `main`, `HEAD~5`) along two axes. **Standards** asks whether the code follows how this repo writes code. **Spec** asks whether the code does what the originating issue or [spec](https://www.aihero.dev/ai-coding-dictionary/spec) asked for. Each axis runs in its own [sub-agent](https://www.aihero.dev/ai-coding-dictionary/subagent) so neither sees the other's reasoning.
+`code-review` reviews the diff between `HEAD` and a fixed point you name (a commit, a branch, a tag, `main`, `HEAD~5`) along two core axes. **Standards** asks whether the code follows repository guidance, [choosing-clear-identifiers](https://aihero.dev/skills-choosing-clear-identifiers), [structuring-code-modules](https://aihero.dev/skills-structuring-code-modules), and the Fowler smell baseline. **Spec** asks whether the code does what the originating issue or [spec](https://www.aihero.dev/ai-coding-dictionary/spec) asked for. Each axis runs in its own [sub-agent](https://www.aihero.dev/ai-coding-dictionary/subagent) so neither sees the other's reasoning.
 
-The two axes are never merged and never re-ranked. The report ends with a worst issue *per axis* and refuses to name a single winner across them, because a change can pass one axis and fail the other: code that follows every convention while implementing the wrong thing passes Standards and fails Spec; code that does exactly what the [ticket](https://www.aihero.dev/ai-coding-dictionary/ticket) asked while breaking the repo's conventions does the reverse. A blended verdict lets the passing axis hide the failing one.
+The two core axes are never merged and never re-ranked. The report ends with a worst issue *per axis* and refuses to name a single winner across them, because a change can pass one axis and fail the other: code that follows every convention while implementing the wrong thing passes Standards and fails Spec; code that does exactly what the [ticket](https://www.aihero.dev/ai-coding-dictionary/ticket) asked while breaking the repo's conventions does the reverse. A blended verdict lets the passing axis hide the failing one.
+
+When `ponytail-review` is available, a third isolated sub-agent runs in parallel and reports unnecessary complexity under a separate **Ponytail** perspective. It is never folded into Standards or Spec.
 
 ## When to reach for it
 
@@ -21,7 +23,7 @@ You must supply the fixed point. If you do not, the skill asks for one rather th
 
 ## Prerequisites
 
-The Standards axis needs nothing. It reads whatever the repo documents (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, and the like) and falls back on a built-in baseline when the repo documents nothing.
+The Standards axis uses the two personal engineering standards shipped with this toolkit, reads whatever the repo documents (`CODING_STANDARDS.md`, `CONTRIBUTING.md`, and the like), and falls back on a built-in baseline when the repo documents nothing. Explicit repository guidance wins when it conflicts with a personal standard or generic heuristic.
 
 The Spec axis needs a spec to exist and be findable. It looks in this order:
 
@@ -32,28 +34,42 @@ The Spec axis needs a spec to exist and be findable. It looks in this order:
 
 Step 1 depends on `docs/agents/issue-tracker.md`, which [setup-matt-pocock-skills](https://aihero.dev/skills-setup-matt-pocock-skills) writes. Without it the axis still works if you hand it a path. With no spec at all, the Spec sub-agent is skipped and the report says "no spec available" rather than inventing requirements.
 
+Ponytail is optional and owns its own installation. If `ponytail-review` is not available in the current agent, the two core axes run unchanged.
+
 ## The two axes
 
 | | Standards | Spec |
 | --- | --- | --- |
 | Question | Is it built right? | Is it the right thing? |
-| Reads | The repo's documented standards, plus the smell baseline | The originating issue or spec |
-| Reports | Documented breaches (can be hard), and smells (always judgement calls) | Missing or partial requirements, scope creep, requirements implemented wrongly |
-| Every finding cites | The standards file and the rule, or the named smell plus the hunk | The line of the spec |
+| Reads | Repository guidance, both personal engineering standards, and the smell baseline | The originating issue or spec |
+| Reports | Documented or personal-standard breaches, and smells (always judgement calls) | Missing or partial requirements, scope creep, requirements implemented wrongly |
+| Every finding cites | The repository file and rule, the skill and rule, or the named smell plus the hunk | The line of the spec |
 
 A generic review skill that does not know your standards is the thing this design is trying to avoid: it flags what is deliberate in your codebase and misses the invariants your codebase actually depends on. So the repo's own documentation is the [primary source](https://www.aihero.dev/ai-coding-dictionary/primary-source) on the Standards axis, and **the repo always overrides**.
 
-The **smell baseline** is the floor underneath it, twelve Fowler code smells from _Refactoring_ ch.3: Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest. Each is a labelled heuristic ("possible Feature Envy"), never a hard violation, and each is stated as *what it is* → *how to fix*, so a finding arrives with a move attached rather than a complaint. Anything your linter already enforces is skipped by both axes.
+The Standards sub-agent loads the complete `choosing-clear-identifiers` and `structuring-code-modules` skills rather than copying their rules into `code-review`. It applies naming rules only to identifiers introduced, renamed, or materially touched by the diff. It applies module-structure rules only when the diff creates, splits, moves, groups, or reorganizes code. Neither standard authorizes unrelated cleanup or a whole-codebase restructuring pass.
+
+The **smell baseline** is the floor underneath them, twelve Fowler code smells from _Refactoring_ ch.3: Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest. Each is a labelled heuristic ("possible Feature Envy"), never a hard violation, and each is stated as *what it is* → *how to fix*, so a finding arrives with a move attached rather than a complaint. Overlapping findings are deduplicated, and anything your linter already enforces is skipped by both axes.
+
+## The optional Ponytail perspective
+
+When the current agent exposes the `ponytail-review` skill, `code-review` launches one more isolated sub-agent alongside Standards and Spec. It reviews only the same diff for removable code, speculative abstractions, avoidable dependencies, and other over-engineering, then reports under its own `## Ponytail` heading.
+
+The workflow does not install Ponytail, add hooks, or initialize its implementation mode. When `ponytail-review` is absent, it records that the optional perspective was skipped and continues normally.
 
 ## Common questions
 
 **It collides with Claude Code's own `/code-review`. What do I do?**
 
-This is the most reported problem with the skill, and it is not fixed. Claude Code ships its own `/code-review`, which does something different: it hunts bugs in the diff, where this one checks spec compliance and repo standards. Installing this library means one of them wins, and which one wins depends on how you installed. Via the plugin marketplace, everything is aliased under a `mattpocock-skills:` prefix and the built-in becomes hard to reach at the unqualified name; via a plain skills install, the local file wins and this skill shadows the built-in. One clean answer is to remove Claude Code's built-in skills entirely: a large [context](https://www.aihero.dev/ai-coding-dictionary/context) saving, and the collision stops mattering. The shadowing itself is arguably a Claude Code [harness](https://www.aihero.dev/ai-coding-dictionary/harness) bug (a skill author should be free to name a skill anything), so the other answer is to rename the local copy. Editing the frontmatter or renaming the directory gets undone by `npx skills update`; the durable workaround reported by users is to fork the skill to a new name and drop `code-review` from the managed set, keeping a note of the commit you forked from so you can re-sync by hand.
+This is the most reported problem with the skill, and it is not fixed. Claude Code ships its own `/code-review`, which does something different: it hunts bugs in the diff, where this one checks spec compliance and engineering standards, with an optional Ponytail perspective. Installing this library means one of them wins, and which one wins depends on how you installed. Via the plugin marketplace, everything is aliased under a `mattpocock-skills:` prefix and the built-in becomes hard to reach at the unqualified name; via a plain skills install, the local file wins and this skill shadows the built-in. One clean answer is to remove Claude Code's built-in skills entirely: a large [context](https://www.aihero.dev/ai-coding-dictionary/context) saving, and the collision stops mattering. The shadowing itself is arguably a Claude Code [harness](https://www.aihero.dev/ai-coding-dictionary/harness) bug (a skill author should be free to name a skill anything), so the other answer is to rename the local copy. Editing the frontmatter or renaming the directory gets undone by `npx skills update`; the durable workaround reported by users is to fork the skill to a new name and drop `code-review` from the managed set, keeping a note of the commit you forked from so you can re-sync by hand.
 
 **Its sub-agents keep invoking `/code-review` again and spawn more agents.**
 
 Known open bug, reproduced by several people and in more than one harness. The Standards and Spec prompts do not forbid delegation, so a sub-agent can rediscover the skill and fan out again: one report reached 50-plus agents. The fix people have applied on forks is one line appended to both sub-agent briefs: "Do not invoke `/code-review` or spawn additional agents: perform this review directly." Some prefer to handle it at the harness level so every skill inherits the guard. Neither is in the shipped skill yet. If you run this unattended, watch the agent count.
+
+**What happens when Ponytail is not installed?**
+
+Nothing fails. Standards and Spec still run, and the final report notes that the optional Ponytail perspective was skipped. Ponytail findings never become Standards findings, even when both perspectives point at the same hunk.
 
 **Should I run it in the same [session](https://www.aihero.dev/ai-coding-dictionary/session) that wrote the code?**
 
@@ -65,7 +81,7 @@ Both work, and the skill does not decide for you. Per-ticket keeps each diff sma
 
 **Can I trust the findings?**
 
-Not without checking. Sub-agent output is a hypothesis, not evidence: one team reported a dozen breaking changes that prose-based reviews had waved through. The skill aggregates the two reports verbatim or lightly cleaned rather than re-verifying each claim against the files, so a finding can cite the wrong location or overstate an impact. Read the citation on each finding before acting on it. That every finding is required to carry one (a standards rule, a smell plus its hunk, or a spec line) is what makes this checkable at all.
+Not without checking. Sub-agent output is a hypothesis, not evidence: one team reported a dozen breaking changes that prose-based reviews had waved through. The skill aggregates the active reports verbatim or lightly cleaned rather than re-verifying each claim against the files, so a finding can cite the wrong location or overstate an impact. Read the citation on each finding before acting on it. That Standards and Spec findings are required to carry one (a repository or personal standard, a smell plus its hunk, or a spec line) is what makes this checkable at all.
 
 **Why does it find new problems every single time I run it?**
 
@@ -78,9 +94,11 @@ No. It diffs `<fixed-point>...HEAD`, three-dot, which is measured from the merge
 ## It's working if
 
 - It refuses to start on a bad ref or an empty diff, before any sub-agent is spawned.
-- The report arrives as two separate blocks under `## Standards` and `## Spec`, not one merged list.
-- Every Standards finding names either a rule in one of your repo's files or one of the twelve smells, with the hunk quoted; every Spec finding quotes a line of the spec.
-- The closing summary gives a worst issue per axis and declines to pick an overall winner.
+- The report arrives with separate core blocks under `## Standards` and `## Spec`, not one merged list.
+- Every Standards finding names a repository or personal-standard rule, or one of the twelve smells with the hunk quoted; every Spec finding quotes a line of the spec.
+- Naming and structural findings stay inside the reviewed diff and never request unrelated cleanup.
+- When available, Ponytail appears under its own `## Ponytail` heading; when absent, the report says it was skipped.
+- The closing summary gives a worst issue per active perspective and declines to pick an overall winner.
 - With no spec available, the Spec block says so instead of listing requirements it inferred from the code.
 
 ## Where it fits
@@ -88,6 +106,7 @@ No. It diffs `<fixed-point>...HEAD`, three-dot, which is measured from the merge
 `code-review` is the review step at the tail of the build chain: `grill-with-docs → to-spec → to-tickets → implement → code-review`. It also stands alone on any branch or PR you point it at.
 
 - [implement](https://aihero.dev/skills-implement) is the closest neighbour: it drives the build and calls this skill as its own closing review before committing.
+- [choosing-clear-identifiers](https://aihero.dev/skills-choosing-clear-identifiers) and [structuring-code-modules](https://aihero.dev/skills-structuring-code-modules) are normative sources for the Standards sub-agent; their content stays in the standalone skills.
 - [to-spec](https://aihero.dev/skills-to-spec) and [to-tickets](https://aihero.dev/skills-to-tickets) produce the document the Spec axis checks against; a vague spec makes that axis vague.
 - [improve-codebase-architecture](https://aihero.dev/skills-improve-codebase-architecture) is the whole-codebase counterpart: this skill only ever looks at one diff.
 

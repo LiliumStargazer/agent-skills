@@ -1,14 +1,16 @@
 ---
 name: code-review
-description: "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes: Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/spec asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\"."
+description: "Review changes since a fixed point along two core axes: Standards (repository rules, personal engineering standards, and the Fowler smell baseline) and Spec (the originating issue/spec). When ponytail-review is available, add a separate over-engineering perspective. Run active reviews in parallel and report them separately. Use for branches, PRs, work-in-progress changes, or requests to review since a commit, branch, tag, or merge-base."
 ---
 
-Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
+Review the diff between `HEAD` and a fixed point the user supplies along two core axes:
 
-- **Standards**: does the code conform to this repo's documented coding standards?
+- **Standards**: does the code conform to this repo's documented coding standards, the personal engineering standards, and the Fowler smell baseline?
 - **Spec**: does the code faithfully implement the originating issue / spec?
 
-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings.
+When a skill named `ponytail-review` is available, add a separate **Ponytail** perspective for unnecessary complexity and over-engineering. It is not part of the Standards axis.
+
+All active reviews run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings without merging the perspectives.
 
 The issue tracker should have been provided to you. If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.
 
@@ -33,12 +35,22 @@ Look for the originating spec, in this order:
 
 ### 3. Identify the standards sources
 
-Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+The Standards axis always uses three kinds of source:
 
-On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
+- Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+- The `choosing-clear-identifiers` and `structuring-code-modules` skills as personal engineering standards.
+- The **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing.
 
-- **The repo overrides.** A documented repo standard always wins; where it endorses something the baseline would flag, suppress the smell.
-- **Always a judgement call.** Each smell is a labelled heuristic ("possible Feature Envy"), never a hard violation. Like any standard here, skip anything tooling already enforces.
+The Standards sub-agent loads the two personal standards itself through the Skill tool, as specified in step 4. Apply them only to decisions represented by the reviewed diff:
+
+- `choosing-clear-identifiers` governs identifiers introduced, renamed, or materially touched by the change.
+- `structuring-code-modules` governs structural decisions only when the change creates, splits, moves, groups, or reorganizes modules, files, directories, or packages. It must not turn the review into a general restructuring pass.
+
+Three rules bind these sources:
+
+- **The repo overrides.** An explicit documented repo standard wins over a personal standard or baseline heuristic when they conflict. Suppress the conflicting generic finding.
+- **The diff bounds the review.** Do not report pre-existing issues outside the diff or request unrelated refactoring solely to satisfy a standard.
+- **Smells are judgement calls.** Each smell is a labelled heuristic ("possible Feature Envy"), never a hard violation. Like any standard here, skip anything tooling already enforces.
 
 Each smell reads *what it is* → *how to fix*; match it against the diff:
 
@@ -55,13 +67,14 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
 - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
-### 4. Spawn both sub-agents in parallel
+### 4. Spawn the reviews in parallel
 
 **Standards sub-agent prompt** should include:
 
 - The full diff command and commit list.
-- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
-- The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
+- The list of standards-source files found in step 3, plus the smell baseline from step 3 pasted in full.
+- This loading instruction: `Call the Skill tool twice, once with "choosing-clear-identifiers" and once with "structuring-code-modules". Treat the loaded skill bodies as normative sources for this Standards review.`
+- The brief: "Review only the supplied diff. Report, per file/hunk where relevant: (a) violations of documented repository standards, citing the file and rule; (b) violations of choosing-clear-identifiers or structuring-code-modules, citing the skill and rule; and (c) baseline smells, naming the smell and quoting the hunk. Do not request unrelated refactoring or report pre-existing code outside the diff. Deduplicate findings where sources overlap. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, baseline smells are always judgement calls, and an explicit repository standard overrides conflicting personal standards or baseline heuristics. Skip anything tooling already enforces. Under 400 words."
 
 **Spec sub-agent prompt** should include:
 
@@ -71,17 +84,31 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 
 If the spec is missing, skip the Spec sub-agent and note this in the final report.
 
+**Ponytail sub-agent prompt**, only when a skill whose declared name is `ponytail-review` appears in the available skills, should include:
+
+- The full diff command and commit list.
+- This loading instruction: `Call the Skill tool with "ponytail-review".`
+- The brief: "Review only the supplied diff for unnecessary complexity, speculative abstractions, avoidable dependencies, removable code, and over-engineering. Stay within Ponytail's scope. Do not report correctness, security, performance, Standards, or Spec findings, and do not propose work outside the reviewed change. Do not modify the code."
+
+If `ponytail-review` is unavailable, do not fail or attempt to install or initialize Ponytail. Continue with Standards and Spec, and note that the optional perspective was skipped.
+
 ### 5. Aggregate
 
-Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
+Present the core reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. When the Ponytail review ran, present it under a separate `## Ponytail` heading. When it was unavailable, note `Ponytail unavailable; optional perspective skipped.` after the core reports.
 
-End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+Do **not** merge or rerank findings across perspectives. Ponytail findings never move into Standards, even when they point at the same hunk.
 
-## Why two axes
+End with a one-line summary: total findings per active perspective and the worst issue _within each one_ (if any). Preserve Ponytail's net line estimate when it provides one. Don't pick a single winner across perspectives.
 
-A change can pass one axis and fail the other:
+## Why two core axes
+
+A change can pass one core axis and fail the other:
 
 - Code that follows every standard but implements the wrong thing → **Standards pass, Spec fail.**
 - Code that does exactly what the issue asked but breaks the project's conventions → **Spec pass, Standards fail.**
 
 Reporting them separately stops one axis from masking the other.
+
+## Why Ponytail stays separate
+
+Ponytail asks a different question: what complexity can be removed without losing the requested behavior? That is neither repository conformance nor spec fidelity. Keeping it as an optional perspective preserves the two-axis model and lets the review run unchanged when Ponytail is not installed.

@@ -90,7 +90,7 @@ Skills are grouped by who can invoke them. User-invoked skills run only when req
 - **[setup-matt-pocock-skills](./skills/engineering/setup-matt-pocock-skills/SKILL.md)**: Configure issue tracking, triage labels, and domain documentation for a project.
 - **[to-spec](./skills/engineering/to-spec/SKILL.md)**: Turn the current conversation into a specification.
 - **[to-tickets](./skills/engineering/to-tickets/SKILL.md)**: Break a plan or specification into tracer-bullet tickets.
-- **[implement](./skills/engineering/implement/SKILL.md)**: Implement a specification or ticket set with TDD and review.
+- **[implement](./skills/engineering/implement/SKILL.md)**: Implement a specification or ticket set with personal engineering standards, TDD, Ponytail when available, and review.
 - **[wayfinder](./skills/engineering/wayfinder/SKILL.md)**: Map work too large for one agent session.
 
 **Model-invoked**
@@ -103,7 +103,7 @@ Skills are grouped by who can invoke them. User-invoked skills run only when req
 - **[choosing-clear-identifiers](./skills/engineering/choosing-clear-identifiers/SKILL.md)**: Choose and review identifiers for point-of-use clarity.
 - **[codebase-design](./skills/engineering/codebase-design/SKILL.md)**: Design deep modules with small interfaces and clean seams.
 - **[structuring-code-modules](./skills/engineering/structuring-code-modules/SKILL.md)**: Decide file, package, and module structure through an evidence-based package gate.
-- **[code-review](./skills/engineering/code-review/SKILL.md)**: Review a diff against repository standards and its specification.
+- **[code-review](./skills/engineering/code-review/SKILL.md)**: Review a diff against repository and personal standards, its specification, and optionally Ponytail.
 - **[resolving-merge-conflicts](./skills/engineering/resolving-merge-conflicts/SKILL.md)**: Resolve merge or rebase conflicts by tracing intent.
 - **[wizard](./skills/engineering/wizard/SKILL.md)**: Generate an interactive shell wizard for required human steps.
 
